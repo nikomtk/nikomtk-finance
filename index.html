@@ -83,6 +83,20 @@ h2.sec .link{font-size:13px;font-weight:600;color:var(--blue);background:none;bo
 .split-legend{display:flex;justify-content:space-between;margin-top:12px;gap:10px;}
 .split-legend div{font-size:12px;color:#c7cff0;}
 .split-legend b{display:block;color:#fff;font-size:17px;font-weight:700;margin-top:2px;}
+.type-legend{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:12px;}
+.type-legend div{font-size:12px;color:#c7cff0;display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;}
+.type-legend span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.type-legend b{color:#fff;font-weight:700;white-space:nowrap;}
+.hero .who{display:flex;justify-content:space-between;align-items:baseline;}
+.hero .who .n{font-size:15px;font-weight:700;color:#fff;}
+.hero.alt{background:linear-gradient(145deg,#26306b 0%,#3b3f8f 100%);}
+.tip{display:block;margin-bottom:10px;}
+.tip h3{font-size:15px;font-weight:700;margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.tip p{font-size:13.5px;line-height:1.55;margin:6px 0 0;color:var(--text);}
+.tip .muted{color:var(--muted);font-size:12.5px;}
+.tip .fig{font-weight:800;}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;}
+.badge.ok{background:#e3f5ec;color:#0f7a4f;} .badge.warn{background:#fde7ea;color:#b0102a;} .badge.info{background:var(--soft);color:var(--blue);}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px;}
 
 /* listes éditables */
@@ -178,8 +192,9 @@ table.cmp td.best{background:var(--soft);font-weight:700;}
 .note{font-size:12px;color:var(--muted);line-height:1.55;margin-top:12px;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);}
 
 /* tab bar */
-nav.tabs{flex:none;display:flex;background:var(--card);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));}
-nav.tabs button{flex:1;min-width:0;background:none;border:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 4px;font-size:10.5px;font-weight:600;position:relative;cursor:pointer;white-space:nowrap;}
+nav.tabs{flex:none;display:flex;overflow-x:auto;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--card);border-top:1px solid var(--line);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));}
+nav.tabs::-webkit-scrollbar{display:none;}
+nav.tabs button{flex:1 0 auto;min-width:64px;scroll-snap-align:start;background:none;border:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 4px;font-size:10.5px;font-weight:600;position:relative;cursor:pointer;white-space:nowrap;}
 nav.tabs svg{width:22px;height:22px;}
 nav.tabs button[aria-current="true"]{color:var(--navy);}
 nav.tabs button[aria-current="true"]::before{content:"";position:absolute;top:0;width:22px;height:3px;border-radius:2px;background:var(--red);}
@@ -203,6 +218,18 @@ nav.tabs button[aria-current="true"]::before{content:"";position:absolute;top:0;
 const KEY='mes-finances';
 const uid=()=>Math.random().toString(36).slice(2,9);
 
+const TYPES=[['Livret','#6f8ef0'],['Épargne logement','#a9c1ff'],['Assurance-vie','#2fbfa8'],['PEA','#ff3b55'],['CTO','#ff9a62'],['PER','#a58bff'],['Épargne salariale','#f2c94c'],['Compte courant','#c7cff0'],['Autre','#7c86b8']];
+const typeColor=t=>(TYPES.find(x=>x[0]===t)||TYPES[TYPES.length-1])[1];
+function guessType(l){ l=(l||'').toLowerCase();
+  if(/\bper\b|perin|perco|retraite/.test(l)&&!/pei|pee/.test(l)) return /perco/.test(l)?'Épargne salariale':'PER';
+  if(/pei|pee|salariale|interessement|intéressement|participation/.test(l)) return 'Épargne salariale';
+  if(/\bpel\b|\bcel\b|logement/.test(l)) return 'Épargne logement';
+  if(/pea/.test(l)) return 'PEA';
+  if(/cto|titre|degiro|trade|bourse/.test(l)) return 'CTO';
+  if(/assurance|contrat|\buc\b|euro|vie|capitalisation/.test(l)) return 'Assurance-vie';
+  if(/livret|ldds|lep|\bla\b/.test(l)) return 'Livret';
+  if(/\bcc\b|courant|tirelire|compte/.test(l)) return 'Compte courant';
+  return 'Autre'; }
 const SOURCES=['Salaire','Prime / 13e mois','Revenus locatifs','Dividendes & intérêts','Activité indépendante','Allocations','Pension','Autre'];
 
 function defaults(){
@@ -210,7 +237,9 @@ function defaults(){
   return {
     version:3, meta:{updated:new Date().toISOString()},
     noms:{moi:'',p1:'Compte 1',p2:'Compte 2'},
-    revenus:[{id:uid(),label:'Salaire net',source:'Salaire',montant:0}],
+    salaire:{brutAnnuel:'',netAvantImpotAnnuel:'',impotAnnuel:''},
+    fiscal:{revenuFoyer:'',parts:'',lep:'nsp'},
+    revenus:[],
     abonnements:[],
     chargesFixes:L(['Assurance habitation','Eau','Électricité']),
     chargesVariables:L(['Alimentation / courses','Transport / carburant','Restaurants & sorties','Loisirs','Santé','Divers / imprévus']),
@@ -228,7 +257,7 @@ function migrate(s){
   if(!s || typeof s!=='object') return defaults();
   const d=defaults();
   if(!Array.isArray(s.revenus)) s.revenus=[{id:uid(),label:'Salaire net',source:'Salaire',montant:parseFloat(s.salaire)||0}];
-  delete s.salaire;
+  if(typeof s.salaire!=='object'||s.salaire===null) delete s.salaire;
   ['abonnements','chargesFixes','chargesVariables','versements','historique','credits'].forEach(k=>{ if(!Array.isArray(s[k])) s[k]=d[k]; });
   /* anciennes clés de personnes -> p1 / p2 (dans l'ordre) */
   const oldKeys=s.comptes?Object.keys(s.comptes).filter(k=>k!=='p1'&&k!=='p2'):[];
@@ -241,7 +270,11 @@ function migrate(s){
     s.memos.forEach(m=>{ ['p1','p2'].forEach(p=>{ const c=s.comptes[p].find(x=>x.id===m.compteId); if(c && (c.investi===''||c.investi==null)) c.investi=m.investi; }); });
     delete s.memos;
   }
-  s.credits.forEach(c=>{ if(c.taux===undefined) c.taux=null; delete c.capitalRestant; });
+  s.credits.forEach(c=>{ if(c.capitalRestant===undefined) c.capitalRestant=''; delete c.taux; });
+  if(!s.salaire){ const sal=s.revenus.filter(r=>r.source==='Salaire'); const m=sal.reduce((a,r)=>a+(parseFloat(r.montant)||0),0);
+    s.salaire={brutAnnuel:'',netAvantImpotAnnuel:m?Math.round(m*12*100)/100:'',impotAnnuel:''}; s.revenus=s.revenus.filter(r=>r.source!=='Salaire'); }
+  if(!s.fiscal) s.fiscal={revenuFoyer:'',parts:'',lep:'nsp'};
+  ['p1','p2'].forEach(p=>s.comptes[p].forEach(c=>{ if(!c.type) c.type=guessType(c.label); }));
   s.immo=Object.assign({},d.immo,s.immo||{});
   delete s.bourse;
   if(s.projYears==null) s.projYears=15;
@@ -268,7 +301,9 @@ const getPath=p=>p.split('.').reduce((o,k)=>o[k],state);
 function setPath(p,v){ const ks=p.split('.'); const last=ks.pop(); ks.reduce((o,k)=>o[k],state)[last]=v; }
 
 /* ---------- calculs ---------- */
-const totRevenus=()=>sumOf(state.revenus);
+const salNetAvant=()=>num(state.salaire.netAvantImpotAnnuel), salImpot=()=>num(state.salaire.impotAnnuel), salBrut=()=>num(state.salaire.brutAnnuel);
+const salaireMensuel=()=>(salNetAvant()-salImpot())/12;
+const totRevenus=()=>salaireMensuel()+sumOf(state.revenus);
 const totAbos=()=>sumOf(state.abonnements);
 const totCharges=()=>sumOf(state.chargesFixes)+sumOf(state.chargesVariables);
 const totVersements=()=>sumOf(state.versements);
@@ -281,13 +316,23 @@ function moisRestants(dateFin){
   if(end.getDate()>=now.getDate()) m+=1;
   return Math.max(0,m);
 }
-function crd(c){
-  const n=moisRestants(c.dateFin), m=num(c.mensualite), r=num(c.taux)/100/12;
-  if(!n) return 0;
-  return r>0 ? m*(1-Math.pow(1+r,-n))/r : m*n;
+const crdSaisi=c=>c.capitalRestant!==''&&c.capitalRestant!=null;
+function crd(c){ return moisRestants(c.dateFin)&&crdSaisi(c) ? num(c.capitalRestant) : 0; }
+function totalRestant(c){ return num(c.mensualite)*moisRestants(c.dateFin); }
+/* taux nominal annuel retrouvé à partir du capital restant dû, de la mensualité et du nombre d'échéances */
+function tauxCredit(c){
+  const n=moisRestants(c.dateFin), m=num(c.mensualite), K=num(c.capitalRestant);
+  if(!n||!m||!crdSaisi(c)||K<=0) return {etat:'vide'};
+  if(K>m*n+0.5) return {etat:'incoherent'};
+  const pv=r=>r<1e-9? m*n : m*(1-Math.pow(1+r,-n))/r;
+  let lo=0, hi=0.05; if(pv(hi)>K) return {etat:'incoherent'};
+  for(let i=0;i<80;i++){ const mid=(lo+hi)/2; if(pv(mid)>K) lo=mid; else hi=mid; }
+  return {etat:'ok', taux:(lo+hi)/2*12*100};
 }
 const totMensualites=()=>state.credits.filter(c=>moisRestants(c.dateFin)>0).reduce((a,c)=>a+num(c.mensualite),0);
 const totCRD=()=>state.credits.reduce((a,c)=>a+crd(c),0);
+const totRestant=()=>state.credits.reduce((a,c)=>a+totalRestant(c),0);
+const crdManquants=()=>state.credits.filter(c=>moisRestants(c.dateFin)&&!crdSaisi(c)).length;
 const totDepenses=()=>totAbos()+totCharges()+totVersements()+totMensualites();
 const reste=()=>totRevenus()-totDepenses();
 const tauxEpargne=()=>totRevenus()? totVersements()/totRevenus():0;
@@ -295,7 +340,8 @@ const totCompte=p=>sumOf(state.comptes[p]);
 const totBloque=p=>state.comptes[p].filter(c=>c.bloque).reduce((a,c)=>a+num(c.montant),0);
 const N1=()=>esc(state.noms.p1||'Compte 1'), N2=()=>esc(state.noms.p2||'Compte 2');
 const totFoyer=()=>totCompte('p1')+totCompte('p2');
-const patrimoine=()=>totFoyer()-totCRD();
+const patrimoine=()=>totCompte('p1')-totCRD();
+const parType=p=>{ const o={}; state.comptes[p].forEach(c=>{ const t=c.type||guessType(c.label); o[t]=(o[t]||0)+num(c.montant); }); return TYPES.map(t=>[t[0],o[t[0]]||0,t[1]]).filter(x=>x[1]>0); };
 
 function defaultRendement(){
   const all=[...state.comptes.p1,...state.comptes.p2];
@@ -319,11 +365,11 @@ function immo(){
   const loyerBrut=num(im.loyerMensuel)*12, loyer=loyerBrut*(1-num(im.vacanceLocativePct)/100);
   const charges=num(im.chargesCoproMensuel)*12+num(im.taxeFonciereAnnuelle)+num(im.assurancePNOAnnuelle)+loyer*num(im.gestionLocativePct)/100;
   const interets=emprunt*num(im.tauxCredit)/100 + mAss*12;
-  const tmi=num(im.tmiPct)/100, ps=0.172;
+  const tmi=num(im.tmiPct)/100, psF=0.172, psB=0.186;
   const amort=prix*0.85*0.025 + (travaux/10) + num(im.mobilierValeur)/7;
   const amortNu=0;
   function reg(nom,base,type){
-    let impot;
+    let impot; const ps=(type==='foncier'||type==='std')?psF:psB;
     if(type==='foncier'){ const pos=Math.max(0,base); const def=Math.min(10700,Math.max(0,-base)); impot=pos*(tmi+ps)-def*tmi; }
     else if(type==='is'){ const b=Math.max(0,base); impot=b<=42500? b*0.15 : 42500*0.15+(b-42500)*0.25; }
     else impot=Math.max(0,base)*(tmi+ps);
@@ -334,7 +380,7 @@ function immo(){
   const regs=[
     reg('Nue · micro-foncier',loyer*0.7,'std'),
     reg('Nue · réel',loyer-charges-interets-amortNu,'foncier'),
-    reg('LMNP · micro-BIC',loyer*0.5,'std'),
+    reg('LMNP · micro-BIC',loyer*0.5,'bic'),
     reg('LMNP · réel',loyer-charges-interets-amort,'bic'),
     reg('SCI à l’IS',loyer-charges-interets-amort,'is')
   ];
@@ -355,10 +401,17 @@ function K(k){
     case 'ben': return eur(totCompte('p2'));
     case 'nicBloque': return 'dont bloqué '+eur(totBloque('p1'));
     case 'patrimoine': return eur(patrimoine());
-    case 'crd': return eur(totCRD());
+    case 'crd': return eur(totCRD())+(crdManquants()?' *':'');
     case 'mens': return eur(totMensualites(),2);
     case 'sum': return eur(sumOf(getPath(b)),2);
-    case 'crdOne': { const c=state.credits.find(x=>x.id===b); return c?eur(crd(c),0):''; }
+    case 'crdOne': { const c=state.credits.find(x=>x.id===b); if(!c) return ''; const t=tauxCredit(c); return t.etat==='ok'? t.taux.toLocaleString('fr-FR',{maximumFractionDigits:2})+' %' : (t.etat==='incoherent'?'incohérent':'—'); }
+    case 'restOne': { const c=state.credits.find(x=>x.id===b); return c?eur(totalRestant(c)):''; }
+    case 'intOne': { const c=state.credits.find(x=>x.id===b); if(!c) return ''; return crdSaisi(c)&&tauxCredit(c).etat==='ok'? eur(totalRestant(c)-num(c.capitalRestant)) : '—'; }
+    case 'restant': return eur(totRestant());
+    case 'salMens': return eur(salaireMensuel());
+    case 'salTaux': return salNetAvant()? pct(salImpot()/salNetAvant()) : '—';
+    case 'salCharges': return salBrut()&&salNetAvant()? pct(1-salNetAvant()/salBrut()) : '—';
+    case 'autresRev': return eur(sumOf(state.revenus));
     case 'resteOne': { const c=state.credits.find(x=>x.id===b); if(!c) return ''; const n=moisRestants(c.dateFin); return n? n+' mensualité'+(n>1?'s':'')+' restante'+(n>1?'s':'') : 'terminé'; }
     case 'years': return state.projYears+' an'+(state.projYears>1?'s':'');
   }
@@ -386,7 +439,15 @@ function H(k){
     const segs=vals.map((v,i)=>{ const len=v/tot*C; const el=`<circle r="${R}" cx="60" cy="60" fill="none" stroke="${c.set[i]}" stroke-width="16" stroke-dasharray="${Math.max(0,len-2)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"/>`; off+=len; return el; }).join('');
     return `<svg viewBox="0 0 120 120" width="120" height="120">${segs}<text x="60" y="57" text-anchor="middle" class="ax" style="font-size:9px;fill:${c.muted};font-family:inherit;">dépenses</text><text x="60" y="72" text-anchor="middle" style="font-size:13px;font-weight:800;fill:${c.navy};font-family:inherit;">${eur(tot)}</text></svg>`;
   }
-  if(a==='chip'){ const c=state.credits.find(x=>x.id===b); return c&&(c.taux===null||c.taux==='')?'<span class="chip warn">taux ?</span>':''; }
+  if(a==='chip'){ const c=state.credits.find(x=>x.id===b); if(!c) return ''; const t=tauxCredit(c); if(!moisRestants(c.dateFin)) return '<span class="chip">terminé</span>'; return t.etat==='vide'?'<span class="chip warn">capital ?</span>':(t.etat==='incoherent'?'<span class="chip warn">à vérifier</span>':''); }
+  if(a==='creditMsg'){ const c=state.credits.find(x=>x.id===b); if(!c) return ''; const t=tauxCredit(c);
+    return t.etat==='incoherent'?`<p class="hint" style="color:var(--neg);margin-top:8px;">Le capital restant dû dépasse la somme des mensualités restantes (${eur(totalRestant(c))}) : c'est impossible. Vérifie la date de dernière échéance et que la mensualité est bien celle hors assurance.</p>`:''; }
+  if(a==='person'){ const tot=totCompte(b), types=parType(b), t=tot||1;
+    return `<div class="who"><span class="n">${b==='p1'?N1():N2()}</span><span class="l">${b==='p1'?'dont bloqué '+eur(totBloque('p1')):''}</span></div>
+      <div class="big" style="margin:4px 0 14px;">${eur(tot)}</div>
+      <div class="split-bar">${types.map(x=>`<i style="width:${x[1]/t*100}%;background:${x[2]}"></i>`).join('')}</div>
+      <div class="type-legend">${types.map(x=>`<div><span><i class="dot" style="background:${x[2]}"></i>${x[0]}</span><b>${eur(x[1])} · ${Math.round(x[1]/t*100)} %</b></div>`).join('')||'<div><span>Aucun compte</span></div>'}</div>`; }
+  if(a==='conseilsBody') return conseilsBody();
   if(a==='split'){
     const n=totCompte('p1'), bj=totCompte('p2'), t=n+bj||1;
     return `<i style="width:${n/t*100}%;background:#ffffff"></i><i style="width:${bj/t*100}%;background:#e2001a"></i>`;
@@ -465,17 +526,11 @@ function editableList(path,title,addLabel,opts){
 /* ---------- pages ---------- */
 function pAccueil(){
   return `<h1 class="page">${state.noms.moi?'Bonjour '+esc(state.noms.moi):'Mes finances'}</h1>
-  <div class="card hero">
-    <div class="l">Épargne totale du foyer</div>
-    <div class="big" data-k="foyer"></div>
-    <div class="split-bar" data-h="split"></div>
-    <div class="split-legend">
-      <div><i class="dot" style="background:#fff"></i>${N1()}<b data-k="nic"></b></div>
-      <div style="text-align:right;"><i class="dot" style="background:#e2001a"></i>${N2()}<b data-k="ben"></b></div>
-    </div>
-  </div>
+  <div class="card hero" data-h="person:p1"></div>
+  <div class="card hero alt" style="margin-top:10px;" data-h="person:p2"></div>
+  <p class="hint">Épargne totale du foyer : <b data-k="foyer"></b></p>
 
-  <h2 class="sec">Ce mois-ci</h2>
+  <h2 class="sec">Projections mensuelles</h2>
   <div class="card" style="margin-bottom:10px;">
     <div class="stat"><div class="l">Reste à vivre après toutes les dépenses</div><div class="v" style="font-size:28px;" data-k="reste" data-sign="reste"></div></div>
   </div>
@@ -487,10 +542,12 @@ function pAccueil(){
   </div>
 
   <h2 class="sec">Patrimoine</h2>
+  <div class="card stat" style="margin-bottom:10px;"><div class="l">Patrimoine net · épargne ${N1()} − capital restant dû</div><div class="v" style="font-size:26px;" data-k="patrimoine" data-sign="patrimoine"></div></div>
   <div class="grid2">
-    <div class="card stat"><div class="l">Patrimoine net</div><div class="v" data-k="patrimoine" data-sign="patrimoine"></div></div>
     <div class="card stat"><div class="l">Capital restant dû</div><div class="v" data-k="crd"></div></div>
+    <div class="card stat"><div class="l">Total restant à rembourser</div><div class="v" data-k="restant"></div></div>
   </div>
+  <p class="hint">« Total restant à rembourser » = mensualités restantes, intérêts compris. ${crdManquants()?'* Capital restant dû non saisi pour certains crédits (onglet Crédits).':''}</p>
 
   <h2 class="sec">Évolution de l'épargne</h2>
   <div class="card"><div class="chart" data-h="evo"></div></div>
@@ -503,15 +560,29 @@ function pAccueil(){
   <div class="form">
     <div class="f full"><label>Ton prénom</label><input value="${esc(state.noms.moi)}" data-bind="noms.moi" data-type="text" placeholder="affiché en haut de l'accueil"></div>
     <div class="f"><label>Nom du 1er titulaire</label><input value="${esc(state.noms.p1)}" data-bind="noms.p1" data-type="text"></div>
-    <div class="f"><label>Nom du 2e titulaire</label><input value="${esc(state.noms.p2)}" data-bind="noms.p2" data-type="text"></div>
+    <div class="f"><label>Nom du 2e titulaire (exclu du patrimoine net)</label><input value="${esc(state.noms.p2)}" data-bind="noms.p2" data-type="text"></div>
   </div>
   <p class="hint">Les noms s'appliquent partout au prochain changement d'onglet.</p>`;
 }
 function pRevenus(){
   return `<h1 class="page">Revenus</h1>
   <div class="card stat"><div class="l">Total des revenus mensuels</div><div class="v" style="font-size:28px;" data-k="revenus"></div></div>
-  ${editableList('revenus','Sources de revenus','Ajouter un revenu',{source:true})}
-  <p class="hint">Montants mensuels nets. Pour un revenu annuel (prime, dividendes), divise-le par 12. Touche le type sous le libellé pour changer la source.</p>`;
+  <h2 class="sec">Salaire</h2>
+  <div class="form">
+    <div class="f full"><label>Salaire brut annuel €</label><input inputmode="decimal" value="${toInput(state.salaire.brutAnnuel)}" data-bind="salaire.brutAnnuel" data-type="num"></div>
+    <div class="f full"><label>Salaire net annuel avant impôt €</label><input inputmode="decimal" value="${toInput(state.salaire.netAvantImpotAnnuel)}" data-bind="salaire.netAvantImpotAnnuel" data-type="num"></div>
+    <div class="f full"><label>Impôt sur le revenu annuel €</label><input inputmode="decimal" value="${toInput(state.salaire.impotAnnuel)}" data-bind="salaire.impotAnnuel" data-type="num"></div>
+  </div>
+  <div class="card" style="margin-top:10px;">
+    <div class="stat"><div class="l">Salaire net moyen après impôt / mois</div><div class="v" style="font-size:26px;" data-k="salMens"></div></div>
+    <div class="grid2" style="margin-top:12px;">
+      <div class="stat"><div class="l">Taux d'imposition moyen</div><div class="v" style="font-size:16px;" data-k="salTaux"></div></div>
+      <div class="stat"><div class="l">Cotisations (brut → net)</div><div class="v" style="font-size:16px;" data-k="salCharges"></div></div>
+    </div>
+  </div>
+  <p class="hint">Les cumuls annuels figurent sur ta fiche de paie de décembre ; l'impôt sur ton avis d'imposition (ou le cumul du prélèvement à la source). Primes et 13e mois comprises : le calcul les lisse sur 12 mois.</p>
+  ${editableList('revenus','Autres revenus','Ajouter un revenu',{source:true})}
+  <p class="hint">Montants mensuels nets (revenus locatifs, dividendes, allocations…). Pour un revenu annuel, divise-le par 12.</p>`;
 }
 function pDepenses(){
   return `<h1 class="page">Dépenses</h1>
@@ -533,7 +604,7 @@ function comptesList(p,name){
   ${state.comptes[p].map(c=>{ const open=ui.open[c.id]; return `<div class="row">
       ${editing?`<button class="del" data-act="del" data-path="${path}" data-id="${c.id}" aria-label="Supprimer">−</button>`:''}
       <div class="main"><input class="lbl" value="${esc(c.label)}" ${bindList(path,c.id,'label','text')}>
-        ${(c.bloque||(c.investi!==''&&c.investi!=null))?`<div class="sub">${[c.bloque?'bloqué':'',(c.investi!==''&&c.investi!=null)?'plus-value suivie':''].filter(Boolean).join(' · ')}</div>`:''}
+        <div class="sub"><i class="dot" style="background:${typeColor(c.type||guessType(c.label))};width:7px;height:7px;"></i>${[c.type||guessType(c.label),c.bloque?'bloqué':'',(c.investi!==''&&c.investi!=null)?'plus-value suivie':''].filter(Boolean).join(' · ')}</div>
       </div>
       ${amt(bindList(path,c.id,'montant'),c.montant)}
       <button class="chev" data-act="open" data-id="${c.id}" aria-expanded="${open?'true':'false'}" aria-label="Détails"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -541,6 +612,7 @@ function comptesList(p,name){
     ${open?`<div class="detail">
       <div class="f toggle full"><div><label>Épargne bloquée</label><div style="font-size:13px;">Non disponible immédiatement (PER, PEL…)</div></div>
         <label class="switch"><input type="checkbox" ${c.bloque?'checked':''} ${bindList(path,c.id,'bloque','bool')}><span></span></label></div>
+      <div class="f full"><label>Type de placement</label><select ${bindList(path,c.id,'type','text')}>${TYPES.map(t=>`<option ${t[0]===(c.type||guessType(c.label))?'selected':''}>${t[0]}</option>`).join('')}</select></div>
       <div class="f full"><label>Montant initialement investi (pour calculer la plus-value)</label>
         <input inputmode="decimal" placeholder="laisser vide si non concerné" value="${toInput(c.investi)}" ${bindList(path,c.id,'investi','numOrEmpty')}></div>
     </div>`:''}`; }).join('')}
@@ -550,11 +622,8 @@ function comptesList(p,name){
 }
 function pEpargne(){
   return `<h1 class="page">Épargne</h1>
-  <div class="card hero">
-    <div class="l">Épargne totale du foyer</div>
-    <div class="big" data-k="foyer" style="margin-bottom:12px;"></div>
-    <div class="split-bar" data-h="split"></div>
-  </div>
+  <div class="card hero" data-h="person:p1"></div>
+  <div class="card hero alt" style="margin-top:10px;" data-h="person:p2"></div>
   ${comptesList('p1',N1())}
   ${comptesList('p2',N2())}
 
@@ -591,6 +660,7 @@ function pCredits(){
     <div class="card stat"><div class="l">Mensualités</div><div class="v" data-k="mens"></div></div>
     <div class="card stat"><div class="l">Capital restant dû</div><div class="v" data-k="crd"></div></div>
   </div>
+  <div class="card stat" style="margin-top:10px;"><div class="l">Total restant à rembourser (intérêts compris)</div><div class="v" data-k="restant"></div></div>
   <h2 class="sec">En cours<button class="link" data-act="edit" data-path="credits">${ui.edit.credits?'Terminé':'Modifier'}</button></h2>
   ${state.credits.map(c=>`<div class="card credit">
     <div class="credit-head">
@@ -600,13 +670,18 @@ function pCredits(){
     </div>
     <div class="fields">
       <div class="f"><label>Mensualité €</label><input inputmode="decimal" value="${toInput(c.mensualite)}" ${bindList('credits',c.id,'mensualite')}></div>
-      <div class="f"><label>Taux %</label><input inputmode="decimal" placeholder="à saisir" value="${toInput(c.taux)}" ${bindList('credits',c.id,'taux','numOrEmpty')}></div>
+      <div class="f"><label>Capital restant dû €</label><input inputmode="decimal" placeholder="à saisir" value="${toInput(c.capitalRestant)}" ${bindList('credits',c.id,'capitalRestant','numOrEmpty')}></div>
       <div class="f"><label>Fin</label><input type="date" value="${c.dateFin}" ${bindList('credits',c.id,'dateFin','text')} style="font-size:13px;"></div>
     </div>
-    <div class="credit-crd"><div><div class="hint" style="margin:0;">Capital restant dû</div><div class="v" data-k="crdOne:${c.id}"></div></div><span class="chip" data-k="resteOne:${c.id}"></span></div>
+    <div class="credit-crd"><div><div class="hint" style="margin:0;">Taux estimé</div><div class="v" data-k="crdOne:${c.id}"></div></div><span class="chip" data-k="resteOne:${c.id}"></span></div>
+    <div class="grid2" style="margin-top:10px;">
+      <div class="stat"><div class="l">Total restant à payer</div><div class="v" style="font-size:16px;" data-k="restOne:${c.id}"></div></div>
+      <div class="stat"><div class="l">dont intérêts</div><div class="v" style="font-size:16px;" data-k="intOne:${c.id}"></div></div>
+    </div>
+    <div data-h="creditMsg:${c.id}"></div>
   </div>`).join('')}
   <button class="add" data-act="add" data-path="credits">+ Ajouter un crédit</button>
-  <p class="hint">Le capital restant dû se calcule tout seul chaque jour à partir de la mensualité (hors assurance), du taux nominal et de la date de dernière échéance — les trois infos de ton tableau d'amortissement. Sans taux, il vaut la somme des mensualités restantes.</p>`;
+  <p class="hint">Saisis la mensualité hors assurance, le capital restant dû (sur ton espace bancaire ou ton tableau d'amortissement) et la date de dernière échéance : l'appli en déduit le taux, le total restant à payer et la part d'intérêts. Mets à jour le capital restant dû de temps en temps.</p>`;
 }
 function fIm(k,label,full){ return `<div class="f${full?' full':''}"><label>${label}</label><input inputmode="decimal" value="${toInput(state.immo[k])}" data-bind="immo.${k}" data-type="num"></div>`; }
 function pImmo(){
@@ -638,17 +713,107 @@ function pImmo(){
   </div>
   <h2 class="sec">Résultat</h2>
   <div data-h="immoRes"></div>
-  <div class="note">* Déficit foncier imputé sur tes autres revenus (plafond 10 700 €/an). Hypothèses simplifiées : amortissement du bâti 2,5 %/an (terrain 15 % exclu), travaux sur 10 ans, mobilier sur 7 ans ; IS 15 % jusqu'à 42 500 € puis 25 % ; prélèvements sociaux 17,2 %. Les intérêts sont ceux de la 1re année. À valider avec un comptable avant d'acheter.</div>`;
+  <div class="note">* Déficit foncier imputé sur tes autres revenus (plafond 10 700 €/an). Hypothèses simplifiées : amortissement du bâti 2,5 %/an (terrain 15 % exclu), travaux sur 10 ans, mobilier sur 7 ans ; IS 15 % jusqu'à 42 500 € puis 25 % ; prélèvements sociaux 17,2 % en location nue et 18,6 % en meublé (LFSS 2026). Les intérêts sont ceux de la 1re année. À valider avec un comptable avant d'acheter.</div>`;
 }
 
-const PAGES={accueil:pAccueil,revenus:pRevenus,depenses:pDepenses,epargne:pEpargne,credits:pCredits,immo:pImmo};
+
+const BAREME=[[11600,0],[29579,.11],[84577,.30],[181917,.41],[Infinity,.45]];
+function tmiEstimee(){ const R=num(state.fiscal.revenuFoyer), P=num(state.fiscal.parts); if(!R||!P) return null; const q=R/P; return (BAREME.find(t=>q<=t[0])||[0,.45])[1]; }
+function tmiRetenue(){ const t=tmiEstimee(); return t===null? num(state.immo.tmiPct)/100 : t; }
+function conseilsHTML(){
+  const tmi=tmiRetenue(), tmiSrc=tmiEstimee()===null?'valeur de l\'onglet Immo':'estimée avec le barème 2026';
+  const perMens=state.versements.filter(v=>/\bper\b/i.test(v.label)).reduce((a,v)=>a+num(v.montant),0), perAn=perMens*12;
+  const revPro=salNetAvant()*0.9, plafond=Math.max(4710,Math.min(37680,revPro*0.1)), marge=Math.max(0,plafond-perAn);
+  const depMens=totAbos()+totCharges()+totMensualites();
+  const dispo=state.comptes.p1.filter(c=>!c.bloque&&['Livret','Compte courant'].includes(c.type||guessType(c.label))).reduce((a,c)=>a+num(c.montant),0);
+  const mois=depMens? dispo/depMens : 0;
+  const types=Object.fromEntries(parType('p1').map(x=>[x[0],x[1]]));
+  const la=state.comptes.p1.find(c=>/livret a/i.test(c.label)), ldds=state.comptes.p1.find(c=>/ldds/i.test(c.label));
+  const credits=state.credits.map(c=>[c,tauxCredit(c)]).filter(x=>x[1].etat==='ok');
+  const te=tauxEpargne();
+  const tip=(titre,badge,corps)=>`<div class="card tip"><h3>${titre}${badge||''}</h3>${corps}</div>`;
+  const B=(t,c)=>`<span class="badge ${c}">${t}</span>`;
+  let h='';
+  h+=`<h2 class="sec">Ta situation fiscale</h2><div class="form">
+    <div class="f full"><label>Revenu net imposable du foyer (annuel) €</label><input inputmode="decimal" placeholder="sur ton avis d'imposition" value="${toInput(state.fiscal.revenuFoyer)}" data-bind="fiscal.revenuFoyer" data-type="num"></div>
+    <div class="f"><label>Nombre de parts</label><input inputmode="decimal" placeholder="ex. 2,5" value="${toInput(state.fiscal.parts)}" data-bind="fiscal.parts" data-type="num"></div>
+    <div class="f"><label>Éligible au LEP ?</label><select data-bind="fiscal.lep" data-type="text">${[['nsp','Je ne sais pas'],['oui','Oui'],['non','Non']].map(o=>`<option value="${o[0]}" ${state.fiscal.lep===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div>
+  </div><p class="hint">Ces infos restent sur ton téléphone. Elles servent à estimer ta tranche marginale (TMI) et à chiffrer les conseils.</p>`;
+  h+=`<div data-h="conseilsBody"></div>`;
+  return h;
+}
+function conseilsBody(){
+  const tmi=tmiRetenue(), tmiSrc=tmiEstimee()===null?'reprise de l\'onglet Immo — renseigne revenu et parts pour l\'affiner':'estimée avec le barème 2026';
+  const perMens=state.versements.filter(v=>/\bper\b/i.test(v.label)).reduce((a,v)=>a+num(v.montant),0), perAn=perMens*12;
+  const revPro=salNetAvant()*0.9, plafond=Math.max(4710,Math.min(37680,revPro*0.1)), marge=Math.max(0,plafond-perAn);
+  const depMens=totAbos()+totCharges()+totMensualites();
+  const dispo=state.comptes.p1.filter(c=>!c.bloque&&['Livret','Compte courant'].includes(c.type||guessType(c.label))).reduce((a,c)=>a+num(c.montant),0);
+  const mois=depMens? dispo/depMens : 0;
+  const types=Object.fromEntries(parType('p1').map(x=>[x[0],x[1]]));
+  const la=state.comptes.p1.find(c=>/livret a/i.test(c.label)), ldds=state.comptes.p1.find(c=>/ldds/i.test(c.label));
+  const credits=state.credits.map(c=>[c,tauxCredit(c)]).filter(x=>x[1].etat==='ok');
+  const te=tauxEpargne();
+  const tip=(titre,badge,corps)=>`<div class="card tip"><h3>${titre} ${badge||''}</h3>${corps}</div>`;
+  const B=(t,c)=>`<span class="badge ${c}">${t}</span>`;
+  const P=t=>`<p>${t}</p>`;
+  let h='<h2 class="sec">Défiscalisation</h2>';
+  h+=tip('Ta tranche marginale',B(Math.round(tmi*100)+' %','info'),
+    P(`TMI ${tmiSrc}. Chaque euro déduit de ton revenu imposable te fait économiser <b>${Math.round(tmi*100)} centimes</b> d'impôt.`)+
+    (salNetAvant()?P(`Ton taux moyen d'imposition sur salaire est de <b>${salImpot()&&salNetAvant()?pct(salImpot()/salNetAvant()):'—'}</b>.`):P('<span class="muted">Renseigne ton salaire dans l\'onglet Revenus pour des conseils chiffrés.</span>')));
+  h+=tip('Plan d\'épargne retraite (PER)', tmi>=0.30?B('prioritaire','ok'):B(tmi>=0.11?'peu rentable':'inutile','warn'),
+    P(`Tu verses environ <b>${eur(perAn)}/an</b> sur ton PER → économie d'impôt estimée <b class="fig">${eur(perAn*tmi)}</b>/an.`)+
+    (salNetAvant()?P(`Plafond de déduction estimé pour tes versements 2026 : <b>${eur(plafond)}</b> (10 % de tes revenus d'activité 2025, entre 4 710 € et 37 680 €). ${marge>0?`Il te reste environ <b>${eur(marge)}</b> de marge : les verser avant le 31 décembre ferait économiser jusqu'à <b class="fig">${eur(marge*tmi)}</b>.`:'Tu es au plafond.'}`):'')+
+    P('<span class="muted">Depuis 2026, les plafonds non utilisés se reportent sur 5 ans (au lieu de 3) : ton montant exact figure sur ton avis d\'impôt, rubrique « plafond épargne retraite ». L\'argent reste bloqué jusqu\'à la retraite (sauf achat de la résidence principale) et les gains subissent 18,6 % de prélèvements sociaux à la sortie. À TMI 11 % ou moins, l\'intérêt est faible.</span>'));
+  h+=tip('Autres leviers d\'impôt','',
+    P('<b>Dons aux associations</b> : 66 % du don en réduction d\'impôt (75 % pour l\'aide aux personnes en difficulté, dans une limite annuelle).')+
+    P('<b>Emploi à domicile</b> (ménage, jardinage, soutien scolaire…) : 50 % des dépenses en crédit d\'impôt, jusqu\'à 12 000 € de dépenses par an (majorations possibles).')+
+    P('<b>Frais réels</b> : si tes trajets domicile-travail sont longs, compare avec l\'abattement forfaitaire de 10 %.')+
+    P('<span class="muted">Hors PER et déficit foncier, les réductions d\'impôt sont plafonnées à 10 000 €/an par foyer (niches fiscales).</span>'));
+
+  h+='<h2 class="sec">Épargne</h2>';
+  h+=tip('Épargne de précaution', !depMens?'':(mois<3?B('à renforcer','warn'):(mois>9?B('trop élevée','warn'):B('bon niveau','ok'))),
+    depMens?P(`Livrets et comptes disponibles de ${N1()} : <b>${eur(dispo)}</b>, soit <b>${mois.toLocaleString('fr-FR',{maximumFractionDigits:1})} mois</b> de dépenses (hors versements d'épargne). La cible habituelle est de 3 à 6 mois.`)+
+      (mois>9?P(`Au-delà de 6 mois, l'excédent (environ <b>${eur(dispo-6*depMens)}</b>) dort à 1,7 %, sous l'inflation (autour de 2 %). Il travaillerait mieux sur un PEA ou une assurance-vie.`):'')
+    :P('<span class="muted">Renseigne tes dépenses pour calculer ce point.</span>'));
+  h+=tip('Livrets réglementés','',
+    P('Taux au 1er août 2026 : <b>Livret A et LDDS 1,7 %</b>, <b>LEP 2,5 %</b>, exonérés d\'impôt et de prélèvements sociaux.')+
+    (state.fiscal.lep==='oui'?P('Tu es éligible au <b>LEP</b> : remplis-le en priorité (plafond 10 000 €), c\'est le seul livret au-dessus de l\'inflation.'):
+     state.fiscal.lep==='nsp'?P('Vérifie ton éligibilité au <b>LEP</b> (sous conditions de revenu fiscal de référence) : c\'est le meilleur livret actuellement.'):'')+
+    ((la&&num(la.montant)>=22950*0.95)||(ldds&&num(ldds.montant)>=12000*0.95)?P('Un de tes livrets est au plafond (Livret A 22 950 €, LDDS 12 000 €) : les nouveaux versements doivent aller ailleurs.'):''));
+  const pea=types['PEA']||0, cto=types['CTO']||0, av=types['Assurance-vie']||0;
+  h+=tip('PEA, assurance-vie ou compte-titres ?', cto>pea?B('à optimiser','warn'):'',
+    P('Fiscalité 2026 : prélèvements sociaux portés à <b>18,6 %</b> sur PEA, compte-titres, PER et épargne salariale ; l\'<b>assurance-vie reste à 17,2 %</b>. La flat tax sur un compte-titres atteint <b>31,4 %</b>.')+
+    P('<b>PEA</b> : le plus efficace pour les ETF actions (MSCI World, S&P 500 en version éligible) — gains exonérés d\'impôt après 5 ans, plafond 150 000 €.')+
+    P('<b>Assurance-vie</b> : abattement de 4 600 € de gains par an (9 200 € en couple) après 8 ans, et cadre avantageux pour la transmission.')+
+    (cto>pea?P(`Ton compte-titres (${eur(cto)}) pèse plus que ton PEA (${eur(pea)}) : oriente tes nouveaux achats d'ETF vers le PEA quand ils y sont éligibles, et garde le compte-titres pour ce qui n'y entre pas.`):'')+
+    (av<100?P('Tu as très peu d\'assurance-vie : ouvrir un contrat en ligne sans frais maintenant fait courir le délai de 8 ans, même avec un petit versement.'):''));
+  h+=tip('Taux d\'épargne', te>=0.2?B('excellent','ok'):(te>=0.1?B('correct','info'):B('faible','warn')),
+    P(`Tu épargnes <b>${pct(te)}</b> de tes revenus chaque mois (${eur(totVersements())}). Au-delà de 15-20 %, tu construis un patrimoine solide.`));
+
+  if(credits.length){
+    h+='<h2 class="sec">Crédits</h2>';
+    h+=tip('Rembourser par anticipation ?','',credits.map(([c,t])=>P(`<b>${esc(c.label)}</b> — taux estimé ${t.taux.toLocaleString('fr-FR',{maximumFractionDigits:2})} % : ${t.taux<1.7?'plus bas que le Livret A, <b>ne rembourse pas</b> par anticipation, ton épargne rapporte plus.':(t.taux<3.5?'comparable à ce que rapporte une épargne prudente : pas de priorité à rembourser.':'<b>coûteux</b> : un remboursement anticipé partiel peut valoir le coup (vérifie les pénalités, souvent plafonnées à 3 % du capital remboursé ou 6 mois d\'intérêts).')}`)).join(''));
+  }
+
+  h+='<h2 class="sec">Immobilier locatif</h2>';
+  h+=tip('Ce qui a changé en 2026','',
+    P('<b>LMNP (meublé)</b> : l\'amortissement au réel est maintenu, mais les prélèvements sociaux passent à 18,6 % et, depuis le 15 février 2025, les amortissements déduits sont réintégrés dans la plus-value à la revente.')+
+    P('<b>Dispositif Jeanbrun</b> (location nue, achats du 21/02/2026 au 31/12/2028) : amortissement de 3 à 5,5 % par an sur 80 % du prix, plafonné à 8 000–12 000 € par an selon le niveau de loyer, avec loyers plafonnés ; dans l\'ancien, travaux d\'au moins 30 % du prix.')+
+    P('<b>Déficit foncier</b> : jusqu\'à 10 700 € par an imputables sur ton revenu global en location nue avec travaux.')+
+    P('<span class="muted">Compare ces régimes sur un bien précis dans l\'onglet Immo.</span>'));
+  h+=`<div class="note">Infos à jour au 27 septembre 2026 (loi de finances et LFSS 2026, taux des livrets au 1er août 2026). Ce sont des pistes générales calculées à partir de tes saisies, pas un conseil fiscal personnalisé : fais valider les montants importants par un conseiller. Pour actualiser ces conseils, demande une mise à jour de l'appli à Claude.</div>`;
+  return h;
+}
+function pConseils(){ return `<h1 class="page">Conseils</h1>`+conseilsHTML(); }
+const PAGES={accueil:pAccueil,revenus:pRevenus,depenses:pDepenses,epargne:pEpargne,credits:pCredits,immo:pImmo,conseils:pConseils};
 const TABS=[
   ['accueil','Accueil','<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'],
   ['revenus','Revenus','<circle cx="12" cy="12" r="9"/><path d="M12 7v10M8 11l4-4 4 4"/>'],
   ['depenses','Dépenses','<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>'],
   ['epargne','Épargne','<path d="M4 20h16M6 20V10M10 20V10M14 20V10M18 20V10M3 10l9-6 9 6z"/>'],
   ['credits','Crédits','<path d="M7 3h8l4 4v14H7z"/><path d="M11 12l4 4M15 12l-4 4"/>'],
-  ['immo','Immo','<path d="M4 21V9l6-4 6 4v12M16 21V12l4 2v7M8 12h4M8 16h4"/>']
+  ['immo','Immo','<path d="M4 21V9l6-4 6 4v12M16 21V12l4 2v7M8 12h4M8 16h4"/>'],
+  ['conseils','Conseils','<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>']
 ];
 document.getElementById('tabs').innerHTML=TABS.map(([k,l,svg])=>`<button data-tab="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${svg}</svg>${l}</button>`).join('');
 
@@ -656,7 +821,7 @@ const view=document.getElementById('view');
 function render(keepScroll){
   const y=view.scrollTop;
   view.innerHTML=PAGES[ui.tab]();
-  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===ui.tab?'true':'false'));
+  document.querySelectorAll('nav.tabs button').forEach(b=>{ b.setAttribute('aria-current',b.dataset.tab===ui.tab?'true':'false'); if(b.dataset.tab===ui.tab&&b.scrollIntoView) b.scrollIntoView({inline:'nearest',block:'nearest'}); });
   refresh();
   view.scrollTop=keepScroll?y:0;
 }
@@ -750,8 +915,8 @@ document.addEventListener('click',e=>{
   else if(act==='del'){ const arr=getPath(path); const i=arr.findIndex(x=>x.id===b.dataset.id); if(i>-1) arr.splice(i,1); save(); render(true); }
   else if(act==='add'){
     const arr=getPath(path); let it;
-    if(path==='credits') it={id:uid(),label:'Nouveau crédit',mensualite:0,taux:null,dateFin:new Date(new Date().getFullYear()+5,0,1).toISOString().slice(0,10)};
-    else if(path.startsWith('comptes.')) it={id:uid(),label:'Nouveau compte',montant:0,bloque:false,investi:''};
+    if(path==='credits') it={id:uid(),label:'Nouveau crédit',mensualite:0,capitalRestant:'',dateFin:new Date(new Date().getFullYear()+5,0,1).toISOString().slice(0,10)};
+    else if(path.startsWith('comptes.')) it={id:uid(),label:'Nouveau compte',montant:0,bloque:false,investi:'',type:'Livret'};
     else if(path==='revenus') it={id:uid(),label:'Nouveau revenu',source:'Autre',montant:0};
     else it={id:uid(),label:'Nouvelle ligne',montant:0};
     arr.push(it); save(); render(true);
